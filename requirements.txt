@@ -1,0 +1,5 @@
+Django
+gunicorn
+pytz
+sqlparse
+django-heroku
