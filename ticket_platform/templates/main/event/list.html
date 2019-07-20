@@ -4,17 +4,26 @@
 
 {% block body %}
 
+{% if events %}
 <h1 class="text-center">View of all Events</h1>
-<ul>
-{% for event in events %}
-    <li>
-        <ul class="list-inline">
-            <li>{{ event.name }}</li>
-            <li>{{ event.time_and_date.date }} at {{ event.get_time }}</li>
-            <li><button><a href="{{ event.get_url }}">Details</a></button></li>
-        </ul>
-    </li>
-{% endfor %}
-</ul>
+    <ul>
+        {% for e in events %}
+            <li>
+                <ul class="list-inline">
+                    <li>Event name: {{ e.event.name }}</li>
+                    <li>At: {{ e.event.time_and_date.date }} at {{ e.event.get_time }}</li>
+                    {% if e.num_of_tickets <= 0 %}
+                        <li>SOLD OUT!</li>
+                    {% else %}
+                        <li>Available tickets: {{ e.num_of_tickets}}</li>
+                        <li><button><a href="{{ e.event.get_url }}">Details</a></button></li>
+                    {% endif %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <h1 class="text-center">No events available. Stay tuned!</h1>
+{% endif %}
 
 {% endblock %}

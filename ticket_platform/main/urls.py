@@ -16,9 +16,9 @@ Including another URLconf
 
 from django.urls import path
 
-from .views import EventsListView, EventDetail
+from .views import event_list_view, event_detail_view
 
 urlpatterns = [
-    path('', EventsListView.as_view()),
-    path('<pk>', EventDetail.as_view())
+    path('', event_list_view, name='main'),
+    path('<event_id>', event_detail_view)
 ]

@@ -9,6 +9,11 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+<nav>
+    <ul class="list-inline">
+        <li><a href="{% url 'main' %}">Strona główna</a></li>
+    </ul>
+</nav>
 {% block body %}
 {% endblock %}
 </body>
