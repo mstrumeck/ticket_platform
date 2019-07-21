@@ -1,11 +1,11 @@
 import datetime
 
+from django.http import HttpRequest
 from django.test import TestCase
 from django.utils import timezone
 
 from .models import Ticket, Event
 from .views import event_list_view, event_detail_view
-from django.http import HttpRequest
 
 
 class BaseSetUp(TestCase):
@@ -44,8 +44,8 @@ class EventObjectTest(BaseSetUp):
 
     def test_get_available_tickets_num_by_categories_with_no_tickets(self):
         self.assertEqual(
-            self.test_event.get_available_tickets_num_by_categories(),
-            {"Normal": 0, "Premium": 0, "VIP": 0}
+            list(self.test_event.get_available_tickets_num_by_categories()),
+            [("Normal", 0), ("Premium", 0), ("VIP", 0)]
         )
 
     def test_get_available_tickets_num_by_categories_with_tickets(self):
@@ -53,8 +53,19 @@ class EventObjectTest(BaseSetUp):
         Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[1][1])
         Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[2][1])
         self.assertEqual(
-            self.test_event.get_available_tickets_num_by_categories(),
-            {"Normal": 1, "Premium": 1, "VIP": 1}
+            list(self.test_event.get_available_tickets_num_by_categories()),
+            [("Normal", 1), ("Premium", 1), ("VIP", 1)]
+        )
+
+    def test_get_available_tickets_num_by_categories_if_one_is_reserved(self):
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[0][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[1][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[2][1])
+        Ticket.objects.last().reserve_ticket()
+
+        self.assertEqual(
+            list(self.test_event.get_available_tickets_num_by_categories()),
+            [("Normal", 1), ("Premium", 1), ("VIP", 0)]
         )
 
 
@@ -71,16 +82,24 @@ class ListOfEventViewTest(TestCase):
         self.assertTrue("No events available. Stay tuned!" in response.content.decode())
 
     def test_of_content_for_view_with_data(self):
-        Event.objects.create(name="Test Event", time_and_date=self.test_datetime)
+        Event.objects.create(name="Test Event", time_and_date=self.test_datetime + timezone.timedelta(minutes=1))
         response = event_list_view(HttpRequest())
         decoded_response = response.content.decode()
-        self.assertTrue("Event name: Test Event" in decoded_response)
+        self.assertTrue("Event name: Test Event." in decoded_response)
         self.assertTrue("SOLD OUT!" in decoded_response)
 
     def test_main_view_with_data(self):
         Event.objects.create(name="Test Event", time_and_date=timezone.now())
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
+
+    def test_main_view_with_two_events_including_one_from_past(self):
+        Event.objects.create(name="Test Event Future", time_and_date=timezone.now() + timezone.timedelta(days=1))
+        Event.objects.create(name="Test Event Past", time_and_date=timezone.now() - timezone.timedelta(days=1))
+        response = event_list_view(HttpRequest())
+        decoded_response = response.content.decode()
+        self.assertTrue("Event name: Test Event Future." in decoded_response)
+        self.assertFalse("Event name: Test Event Past." in decoded_response)
 
 
 class EventDetailViewTest(BaseSetUp):
@@ -92,8 +111,7 @@ class EventDetailViewTest(BaseSetUp):
     def test_detail_view_content_without_ticket_positive_scenario(self):
         response = event_detail_view(HttpRequest(), self.test_event.id)
         decoded_response = response.content.decode()
-        self.assertTrue("Name of event: Test Event" in decoded_response)
-        self.assertTrue("All ticket was sold out!" in decoded_response)
+        self.assertTrue("Detail for Test Event." in decoded_response)
 
     def test_detail_view_content_with_tickets_positive_scenario(self):
         Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[0][1])
@@ -101,12 +119,46 @@ class EventDetailViewTest(BaseSetUp):
         Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[2][1])
         response = event_detail_view(HttpRequest(), self.test_event.id)
         decoded_response = response.content.decode()
-        self.assertTrue("Name of event: Test Event" in decoded_response)
+        self.assertTrue("Detail for Test Event." in decoded_response)
         self.assertTrue("Available tickets:" in decoded_response)
         self.assertTrue("Normal: 1" in decoded_response)
         self.assertTrue("Premium: 1" in decoded_response)
         self.assertTrue("VIP: 1" in decoded_response)
-        self.assertTrue(decoded_response)
+        self.assertEqual(decoded_response.count("Reserve"), 3)
+
+    def test_detail_view_content_with_tickets_if_one_types_of_tickets_non_exist(self):
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[0][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[1][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[2][1], is_sold=True)
+        response = event_detail_view(HttpRequest(), self.test_event.id)
+        decoded_response = response.content.decode()
+        self.assertEqual(decoded_response.count("Reserve"), 2)
+        self.assertTrue("Normal: 1" in decoded_response)
+        self.assertTrue("Premium: 1" in decoded_response)
+        self.assertFalse("VIP: 0" in decoded_response)
+
+    def test_detail_view_content_with_tickets_if_one_types_of_tickets_sold_out(self):
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[0][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[1][1])
+        response = event_detail_view(HttpRequest(), self.test_event.id)
+        decoded_response = response.content.decode()
+        self.assertEqual(decoded_response.count("Reserve"), 2)
+        self.assertTrue("Normal: 1" in decoded_response)
+        self.assertTrue("Premium: 1" in decoded_response)
+        self.assertFalse("VIP: 0" in decoded_response)
+
+    def test_detail_view_content_with_tickets_if_one_types_of_tickets_was_reserved(self):
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[0][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[1][1])
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[2][1])
+        Ticket.objects.last().reserve_ticket()
+
+        response = event_detail_view(HttpRequest(), self.test_event.id)
+        decoded_response = response.content.decode()
+        self.assertEqual(decoded_response.count("Reserve"), 2)
+        self.assertTrue("Normal: 1" in decoded_response)
+        self.assertTrue("Premium: 1" in decoded_response)
+        self.assertFalse("VIP" in decoded_response)
 
     def test_detail_event_view_negative_scenario(self):
         self.test_event.delete()

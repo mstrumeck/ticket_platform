@@ -16,9 +16,10 @@ Including another URLconf
 
 from django.urls import path
 
-from .views import event_list_view, event_detail_view
+from .views import event_list_view, event_detail_view, reserve_ticket_for_event
 
 urlpatterns = [
     path('', event_list_view, name='main'),
-    path('<event_id>', event_detail_view)
+    path('<event_id>', event_detail_view, name='event_detail'),
+    path('<event_id>/reserve/<category>', reserve_ticket_for_event, name='reserve_ticket')
 ]

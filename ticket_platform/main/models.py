@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Event(models.Model):
@@ -31,18 +32,25 @@ class Event(models.Model):
         Count and get a sum of total available ticket sum for event.
         :return: Sum of available tickets.
         """
-        return self.ticket_set.filter(is_sold=False).count()
+        return self.ticket_set.filter(
+            is_sold=False
+        ).exclude(
+                reservation_time__gte=timezone.now()
+            ).count()
 
-    def get_available_tickets_num_by_categories(self) -> dict:
+    def get_available_tickets_num_by_categories(self) -> tuple:
         """
         Count and get a amount of total available tickets per category for event.
-        :return: Dictionary with categories: sum of available ticket.
+        :return: Tuple with categories: sum of available ticket.
         """
-        return {
-            category[1]: self.ticket_set.filter(
-                category=category[1], is_sold=False
-            ).count() for category in Ticket.CATEGORY
-        }
+        return (
+            (category[1], self.ticket_set.filter(
+                category=category[1],
+                is_sold=False
+            ).exclude(
+                reservation_time__gte=timezone.now()
+            ).count()) for category in Ticket.CATEGORY
+        )
 
 
 class Ticket(models.Model):
@@ -63,3 +71,8 @@ class Ticket(models.Model):
     event = models.ForeignKey(to=Event, on_delete=models.PROTECT)
     category = models.CharField(max_length=10, choices=CATEGORY, default="Normal")
     is_sold = models.BooleanField(default=False)
+    reservation_time = models.DateTimeField(default=timezone.now())
+
+    def reserve_ticket(self, minutes=15):
+        self.reservation_time = timezone.now() + timezone.timedelta(minutes=minutes)
+        self.save()

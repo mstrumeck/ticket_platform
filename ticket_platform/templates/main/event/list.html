@@ -10,8 +10,8 @@
         {% for e in events %}
             <li>
                 <ul class="list-inline">
-                    <li>Event name: {{ e.event.name }}</li>
-                    <li>At: {{ e.event.time_and_date.date }} at {{ e.event.get_time }}</li>
+                    <li>Event name: {{ e.event.name }}.</li>
+                    <li>At: {{ e.event.time_and_date.date }} at {{ e.event.get_time }}.</li>
                     {% if e.num_of_tickets <= 0 %}
                         <li>SOLD OUT!</li>
                     {% else %}

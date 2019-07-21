@@ -7,15 +7,19 @@
 <h3 class="text-center">View for Event: <b>{{ event.name}}</b></h3>
 
 <ul>
-    <li>Name of event: {{ event.name }}</li>
-    <li>Event start date: {{ event.time_and_date.date }} at {{ event.get_time }}</li>
-    {% if Normal or Premium or VIP %}
-        <li>Available tickets:</li>
-        <li>Normal: {{ Normal }}</li>
-        <li>Premium: {{ Premium}}</li>
-        <li>VIP: {{ VIP }}</li>
-    {% else %}
-        <li>All ticket was sold out!</li>
-    {% endif %}
+    <li>Detail for {{ event.name}}.</li>
+    <li>Start date: {{ event.time_and_date.date }} at {{ event.get_time }}.</li>
+    <li>Available tickets: </li>
+    {% for category, num in tickets %}
+        {% if num %}
+            <li>{{ category }}: {{ num }}
+                <button>
+                    <a href="{% url 'reserve_ticket' event.id category %}">
+                        Reserve</a>
+                </button>
+            </li>
+        {% endif %}
+    {% endfor %}
 </ul>
+
 {% endblock %}
