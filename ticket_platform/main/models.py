@@ -53,15 +53,29 @@ class Event(models.Model):
         )
 
 
+class Order(models.Model):
+    """
+    Class with Order object where is stored all data about transaction.
+    """
+    CURRENCY = (
+        ("EUR", "Euro"),
+    )
+    name = models.CharField(max_length=30)
+    surname = models.CharField(max_length=30)
+    created = models.DateTimeField(auto_now=True)
+
+
 class Ticket(models.Model):
     """
     Class with Ticket Model.
 
     Fields:
-        CATEGORY = constant list of tickets type.
-        event = show us for what event ticket is.
-        category = Char field with category selected according to CATEGORY field.
-        is_sold = Information is ticket already sold.
+        CATEGORY - constant list of tickets type.
+        event - show us for what event ticket is.
+        category - char field with category selected according to CATEGORY field.
+        is_sold - information is ticket already sold.
+        reservation_time - time until ticket will be lock for other users
+        price - price of ticket in decimal
     """
     CATEGORY = (
         ("N", "Normal"),
@@ -69,10 +83,40 @@ class Ticket(models.Model):
         ("V", "VIP")
     )
     event = models.ForeignKey(to=Event, on_delete=models.PROTECT)
+    order = models.ForeignKey(to=Order, on_delete=models.PROTECT, null=True)
     category = models.CharField(max_length=10, choices=CATEGORY, default="Normal")
     is_sold = models.BooleanField(default=False)
     reservation_time = models.DateTimeField(default=timezone.now())
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
-    def reserve_ticket(self, minutes=15):
+    def reserve(self, minutes=15):
+        """
+        Increase 'reservation_time' according to 'minutes' parameter. If reservation_time is bigger than current time,
+        ticket will be lock for other users.
+        :param minutes: integer value needed to increase 'reservation_time'
+        """
         self.reservation_time = timezone.now() + timezone.timedelta(minutes=minutes)
         self.save()
+
+    def release(self):
+        """
+        Set back 'reservation_time' to current. Ticket is now visible for rest of users.
+        """
+        self.reservation_time = timezone.now()
+        self.save()
+
+    def is_reservation_expired(self):
+        """
+        Give information if ticket is still reserved by other user
+        :return: bool
+        """
+        return self.reservation_time <= timezone.now()
+
+    def buy(self, order):
+        """
+        Change ticket status to permanent invisible for other users, and assign ticket to suitable order.
+        :param order: Order object with information about transaction.
+        """
+        self.is_sold = True
+        self.order = order
+        self.release()

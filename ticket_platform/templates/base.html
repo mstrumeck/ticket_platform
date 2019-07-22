@@ -12,6 +12,7 @@
 <nav>
     <ul class="list-inline">
         <li><a href="{% url 'main' %}">Strona główna</a></li>
+        <li><a href="{% url 'basket_view' %}">Koszyk({{ basket|length }})</a></li>
     </ul>
 </nav>
 {% block body %}

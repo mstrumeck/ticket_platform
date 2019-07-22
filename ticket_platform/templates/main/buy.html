@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Payment{% endblock%}
+
+{% block body %}
+
+{% if basket.get_total_price %}
+    <h1>Payment</h1>
+    <h2>Summary</h2>
+    <ul>
+        {% for key, value in basket %}
+        <li>Event: {{ key.name }}.</li>
+        <ul>
+            {% if value.Normal %}<li>Normal: {{ value.Normal }}</li>{% endif %}
+            {% if value.Premium %}<li>Premium: {{ value.Premium }}</li>{% endif %}
+            {% if value.VIP %}<li>VIP {{ value.VIP}}</li>{% endif %}
+            <li>Total price: {{ value.total_price }}</li>
+        </ul>
+        {% endfor %}
+    </ul>
+    <h3>Total price for all tickets: {{ basket.get_total_price }}.</h3>
+
+    <form action="" method="POST">
+        {{ form.as_ul }}
+        {% csrf_token %}
+        <input type="submit" value="Zapłać">
+    </form>
+    {% if payment_error %}
+    <h2><strong>{{ payment_error }}</strong></h2>
+    {% endif %}
+{% else %}
+<h2>Your basket is empty!</h2>
+{% endif %}
+{{ o }}
+{% endblock %}

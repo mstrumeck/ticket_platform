@@ -16,10 +16,13 @@ Including another URLconf
 
 from django.urls import path
 
-from .views import event_list_view, event_detail_view, reserve_ticket_for_event
+from .views import event_list_view, event_detail_view, reserve_ticket_for_event, basket_view, release_ticket_from_basket, buy_tickets
 
 urlpatterns = [
     path('', event_list_view, name='main'),
+    path('basket', basket_view, name='basket_view'),
+    path('basket/buy', buy_tickets, name='buy_tickets'),
+    path('basket/release/<event_id>/<category>', release_ticket_from_basket, name='release_ticket'),
     path('<event_id>', event_detail_view, name='event_detail'),
-    path('<event_id>/reserve/<category>', reserve_ticket_for_event, name='reserve_ticket')
+    path('<event_id>/reserve/<category>', reserve_ticket_for_event, name='reserve_ticket'),
 ]

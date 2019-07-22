@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Basket.{% endblock%}
+
+{% block body %}
+
+{% if basket.get_total_price %}
+    <h1>Your basket.</h1>
+    <h2>Reserved tickets.</h2>
+    <ul>
+        {% for key, value in basket %}
+        <li>Event: {{ key.name }}.</li>
+        <ul>
+            {% if value.Normal %}<li>Normal: {{ value.Normal }}
+            <button>
+                <a href="{% url 'release_ticket' key.id 'Normal' %}">Release.</a>
+            </button>
+        </li>{% endif %}
+            {% if value.Premium %}<li>Premium: {{ value.Premium }}
+            <button>
+                <a href="{% url 'release_ticket' key.id 'Premium' %}">Release.</a>
+            </button>
+        </li>{% endif %}
+            {% if value.VIP %}<li>VIP {{ value.VIP}}
+            <button>
+                <a href="{% url 'release_ticket' key.id 'VIP' %}">Release.</a>
+            </button>
+        </li>{% endif %}
+            <li>Total price: {{ value.total_price }}</li>
+        </ul>
+        {% endfor %}
+    </ul>
+        <h3>Total price for all tickets: {{ basket.get_total_price }}.</h3>
+        <button><a href="{% url 'buy_tickets' %}">Buy tickets.</a></button>
+{% else %}
+    <h2>Your basket is empty.</h2>
+{% endif %}
+{% endblock %}

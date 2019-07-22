@@ -14,8 +14,7 @@
         {% if num %}
             <li>{{ category }}: {{ num }}
                 <button>
-                    <a href="{% url 'reserve_ticket' event.id category %}">
-                        Reserve</a>
+                    <a href="{% url 'reserve_ticket' event.id category %}">Reserve</a>
                 </button>
             </li>
         {% endif %}
