@@ -1,4 +1,5 @@
 import datetime
+from unittest import mock
 
 from django.http import HttpRequest
 from django.test import TestCase
@@ -6,8 +7,10 @@ from django.utils import timezone
 
 from .basket import Basket
 from .exceptions import NonExistingTicketToRemove
+from .line_chart_plotter import LineChartAbstract, OrderPlotter
 from .models import Ticket, Event, Order
 from .views import event_list_view, event_detail_view
+from .utils import time_between, payment_error_message, turn_none_into_zero
 
 
 class BaseSetUp(TestCase):
@@ -15,6 +18,15 @@ class BaseSetUp(TestCase):
     def setUp(self):
         self.test_datetime = timezone.now()
         self.test_event = Event.objects.create(name="Test Event", time_and_date=self.test_datetime)
+
+
+class PlotterTestSetup(TestCase):
+
+    def setUp(self):
+        self.test_order_one = Order.objects.create(name="test1", surname="test1")
+        self.mocked = timezone.now() + timezone.timedelta(days=3)
+        with mock.patch('django.utils.timezone.now', mock.Mock(return_value=self.mocked)):
+            self.test_order_two = Order.objects.create(name="test2", surname="test2")
 
 
 class EventObjectTest(BaseSetUp):
@@ -229,10 +241,10 @@ class TestOrderObject(BaseSetUp):
         self.assertEqual(test_order.name, "test_name")
         self.assertEqual(test_order.surname, "test_surname")
         datetime_now = datetime.datetime.now()
-        self.assertEqual(test_order.created.date(), datetime_now.date())
-        self.assertEqual(test_order.created.hour, datetime_now.hour)
-        self.assertEqual(test_order.created.minute, datetime_now.minute)
-        self.assertEqual(test_order.created.second, datetime_now.second)
+        self.assertEqual(test_order.time_and_date.date(), datetime_now.date())
+        self.assertEqual(test_order.time_and_date.hour, datetime_now.hour)
+        self.assertEqual(test_order.time_and_date.minute, datetime_now.minute)
+        self.assertEqual(test_order.time_and_date.second, datetime_now.second)
 
 
 class TestBasketObject(BaseSetUp):
@@ -323,3 +335,67 @@ class TestBasketObject(BaseSetUp):
             self.test_basket.add(t)
 
         self.assertEqual(len(self.test_basket), 3)
+
+
+class LineCharPlotterTest(PlotterTestSetup):
+
+    def setUp(self):
+        super().setUp()
+        self.line_plotter = LineChartAbstract(Order)
+
+    def test_get_first_date_of_occurence(self):
+        self.assertEqual(self.line_plotter.get_first_date_of_occurence().date(), timezone.now().date())
+
+    def test_get_last_date_of_occurence(self):
+        test_value = self.mocked + timezone.timedelta(days=1)
+        self.assertEqual(self.line_plotter.get_last_date_of_occurence().date(), test_value.date())
+
+    def test_get_number_of_objects_per_day(self):
+        self.assertEqual(len(self.line_plotter.get_number_of_objects_per_day()), 5)
+        self.assertEqual(sum(self.line_plotter.get_number_of_objects_per_day()), 2)
+
+    def test_get_days_range(self):
+        self.assertEqual(len(self.line_plotter.get_days_range()), 5)
+        for day in self.line_plotter.get_days_range():
+            self.assertEqual(type(day), int)
+
+
+class OrderPlotterTest(PlotterTestSetup):
+
+    def setUp(self):
+        super().setUp()
+        self.order_plotter = OrderPlotter()
+        self.test_event = Event.objects.create(name="Test Event", time_and_date=timezone.now())
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[0][1], price=10)
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[1][1], price=20,  order=self.test_order_one, is_sold=True)
+        Ticket.objects.create(event=self.test_event, category=Ticket.CATEGORY[2][1], price=30,  order=self.test_order_two)
+
+    def test_get_number_of_sold_tickets_by_category(self):
+        self.assertEqual(self.order_plotter.get_number_of_sold_tickets_by_category('Normal'), [0, 0, 0, 0, 0])
+        self.assertEqual(self.order_plotter.get_number_of_sold_tickets_by_category('VIP'), [0, 0, 0, 1, 0])
+
+    def test_get_sold_tickets_per_day(self):
+        self.assertEqual(self.order_plotter.get_sold_tickets_per_day(), [1, 0, 0, 1, 0])
+
+    def test_get_amount_of_cash_from_tickets_per_day_total(self):
+        self.assertEqual(self.order_plotter.get_amount_of_cash_from_tickets_per_day_total(), [20, 0, 0, 30, 0])
+
+    def test_get_amount_of_cash_from_ticket_per_day_for_category(self):
+        self.assertEqual(self.order_plotter.get_amount_of_cash_from_ticket_per_day_for_category('Premium'), [20, 0, 0, 0, 0])
+
+
+class TestUtils(PlotterTestSetup):
+
+    def setUp(self):
+        super().setUp()
+        self.line_plotter = LineChartAbstract(Order)
+
+    def test_time_between(self):
+        result = list(time_between(self.line_plotter.get_first_date_of_occurence(), self.line_plotter.get_last_date_of_occurence()))
+        self.assertEqual(len(result), 5)
+
+    def test_payment_error_message(self):
+        self.assertEqual(payment_error_message(30, "USD"), "USD 30 is not valid amount. Please, provide a proper amount in 30.")
+
+    def test_turn_none_into_zero(self):
+        self.assertEqual(turn_none_into_zero(None), 0)

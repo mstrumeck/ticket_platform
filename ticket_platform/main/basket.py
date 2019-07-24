@@ -1,6 +1,7 @@
 from django.conf import settings
-from .models import Ticket, Event, Order
+
 from .exceptions import NonExistingTicketToRemove
+from .models import Ticket, Event, Order
 
 
 class Basket:
@@ -32,12 +33,13 @@ class Basket:
         Before that, user has opportunity to buy it.
         :param ticket: Ticket object for given event.
         """
+        ticket.event.increase_reservations_counter()
         if str(ticket.id) not in self.basket:
             self.basket[str(ticket.id)] = {
                 'price': str(ticket.price),
-                'category': ticket.category
+                'category': ticket.category,
             }
-            ticket.reserve()
+        ticket.reserve()
         self.save()
 
     def save(self) -> None:
@@ -95,13 +97,21 @@ class Basket:
         """
         tickets = self._get_tickets_ob_by_tickets_id_in_basket()
         events = {}
-        for tickets in tickets:
-            if not events.get(tickets.event):
-                event_key = tickets.event
+        for ticket in tickets:
+            event_key = ticket.event
+            if not events.get(ticket.event):
                 events[event_key] = {c[1]: 0 for c in Ticket.CATEGORY}
                 events[event_key]['total_price'] = 0
-            events[event_key][tickets.category] += 1
-            events[event_key]['total_price'] += tickets.price
+
+            events[event_key][ticket.category] += 1
+            events[event_key]['total_price'] += ticket.price
+
+            expired_time_label = f'{ticket.category}_expired_time'
+            if not events[event_key].get(expired_time_label):
+                events[event_key][expired_time_label] = ticket.reservation_time
+            else:
+                if events[event_key][expired_time_label] < ticket.reservation_time:
+                    events[event_key][expired_time_label] = ticket.reservation_time
 
         for item in events.items():
             yield item

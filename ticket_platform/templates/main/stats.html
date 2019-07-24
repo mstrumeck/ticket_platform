@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics{% endblock%}
+
+{% block body %}
+{% if total_num_of_events %}
+    <h1>Statistics.</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Event</th>
+                <th>Event date</th>
+                <th>Total tickets</th>
+                <th>Reservations</th>
+                <th>Sold tickets</th>
+                <th>Profit</th>
+                <th>Possible profit</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for data in events_summary %}
+            <tr>
+                <td>{{ data.event.name }}</td>
+                <td>{{ data.event.time_and_date }}</td>
+                <td>{{ data.total_tickets }}</td>
+                <td>{{ data.reservations }}</td>
+                <td>{{ data.sold_tickets }}</td>
+                <td>{{ data.profit }}</td>
+                <td>{{ data.possible_profit }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+        <tr>
+            <td><b>Total events: {{ total_num_of_events }}</b></td>
+            <td></td>
+            <td><b>{{ total_num_of_tickets }}</b></td>
+            <td><b>{{ total_reservation }}</b></td>
+            <td><b>{{ total_sold_tickets }}</b></td>
+            <td><b>{{ total_profit }}</b></td>
+            <td><b>{{total_possible_profit }}</b></td>
+        </tr>
+        </tfoot>
+    </table>
+    {{ orders_per_day }}
+
+    {{ profits_per_day }}
+{% else %}
+<h1>No data within to show! Try populate database first.</h1>
+{% endif %}
+{% endblock %}

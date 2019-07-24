@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Basket.{% endblock%}
+{% load humanize %}
+
+{% block title %}Basket.{% endblock %}
 
 {% block body %}
 
@@ -14,17 +16,17 @@
             {% if value.Normal %}<li>Normal: {{ value.Normal }}
             <button>
                 <a href="{% url 'release_ticket' key.id 'Normal' %}">Release.</a>
-            </button>
+            </button> Will expire within {{ value.Normal_expired_time|naturaltime }}.
         </li>{% endif %}
             {% if value.Premium %}<li>Premium: {{ value.Premium }}
             <button>
                 <a href="{% url 'release_ticket' key.id 'Premium' %}">Release.</a>
-            </button>
+            </button> Will expire within {{ value.Premium_expired_time|naturaltime }}.
         </li>{% endif %}
             {% if value.VIP %}<li>VIP {{ value.VIP}}
             <button>
                 <a href="{% url 'release_ticket' key.id 'VIP' %}">Release.</a>
-            </button>
+            </button> Will expire within {{ value.VIP_expired_time|naturaltime }}.
         </li>{% endif %}
             <li>Total price: {{ value.total_price }}</li>
         </ul>

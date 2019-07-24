@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import F
 from django.utils import timezone
 
 
@@ -12,6 +13,14 @@ class Event(models.Model):
     """
     name = models.CharField(max_length=30)
     time_and_date = models.DateTimeField()
+    reservations = models.IntegerField(default=0)
+
+    def increase_reservations_counter(self) -> None:
+        """
+        Mark if someone click on the reservation button for this event.
+        """
+        self.reservations = F('reservations') + 1
+        self.save()
 
     def get_time(self) -> str:
         """
@@ -62,7 +71,7 @@ class Order(models.Model):
     )
     name = models.CharField(max_length=30)
     surname = models.CharField(max_length=30)
-    created = models.DateTimeField(auto_now=True)
+    time_and_date = models.DateTimeField(auto_now=True)
 
 
 class Ticket(models.Model):
@@ -89,7 +98,7 @@ class Ticket(models.Model):
     reservation_time = models.DateTimeField(default=timezone.now())
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
-    def reserve(self, minutes=15):
+    def reserve(self, minutes=15) -> None:
         """
         Increase 'reservation_time' according to 'minutes' parameter. If reservation_time is bigger than current time,
         ticket will be lock for other users.
@@ -98,21 +107,21 @@ class Ticket(models.Model):
         self.reservation_time = timezone.now() + timezone.timedelta(minutes=minutes)
         self.save()
 
-    def release(self):
+    def release(self) -> None:
         """
         Set back 'reservation_time' to current. Ticket is now visible for rest of users.
         """
         self.reservation_time = timezone.now()
         self.save()
 
-    def is_reservation_expired(self):
+    def is_reservation_expired(self) -> bool:
         """
         Give information if ticket is still reserved by other user
         :return: bool
         """
         return self.reservation_time <= timezone.now()
 
-    def buy(self, order):
+    def buy(self, order) -> None:
         """
         Change ticket status to permanent invisible for other users, and assign ticket to suitable order.
         :param order: Order object with information about transaction.
