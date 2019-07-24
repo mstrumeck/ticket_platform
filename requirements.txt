@@ -3,3 +3,4 @@ gunicorn
 pytz
 sqlparse
 django-heroku
+plotly
